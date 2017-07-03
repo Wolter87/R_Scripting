@@ -6,73 +6,61 @@
 #
 #    http://shiny.rstudio.com/
 #
-library(data.table)
+
 library(shiny)
 
-# Define UI for application
+# Define UI for application that draws a histogram
 ui <- fluidPage(
    
-  titlePanel("DataBrowser"),
-  
   sidebarLayout(
     sidebarPanel(
-    fileInput("file", "Upload csv bestand"),
+      helpText("Select a stock to examine. 
+               Information will be collected from Google finance."),
+      
+      textInput("symb", "Symbol", "SPY"),
+      
+      dateRangeInput("dates", 
+                     "Date range",
+                     start = "2013-01-01", 
+                     end = as.character(Sys.Date())),
+      
+      br(),
+      
+      checkboxInput("log", "Plot y axis on log scale", 
+                    value = FALSE),
+      
+      checkboxInput("adjust", 
+                    "Adjust prices for inflation", value = FALSE)
+      ),
     
-    textInput("FindFloor", "Zoek vloer:"),
-    actionButton("SearchFloor", "Zoek vloer"),
-    
-br(), br(),
-
-    textInput("FindTile", "Zoek tegel:"),
-    actionButton("SearchTile", "Zoek tegel"),
-    
-br(), br(),
-
-    dateRangeInput("dates", 
-                    "Date range",
-                    start = "2016-03-08", 
-                    end = "2016-03-30"),
-    actionButton("SearchDate", "Filter datum"),
-
-    actionButton("Reset", "Herstel")
-    ),
- 
-    mainPanel(
-    tableOutput("df_out")
-    )
+    mainPanel(plotOutput("plot"))
   )
 )
 
-# Define server logic
-server <- function(input, output) {
-  
- values <- reactiveValues(df = NULL)
+library(quantmod)
+source("C:/Users/Wolter/Documenten/School/HvA HBO ICT/Project big data/stockVis/helpers.R")
 
-  #browse knop werking
-  observeEvent(input$file, {
-    values$df <- read.csv(input$file$datapath, stringsAsFactors=FALSE)
+# Define server logic required to draw a histogram
+server <- function(input, output) {
+   
+  dataInput <- reactive({
+    getSymbols(input$symb, src = "google", 
+              from = input$dates[1],
+              to = input$dates[2],
+              auto.assign = FALSE)
   })
-  #Vloer zoek knop
-  observeEvent(input$SearchFloor, {
-    values$df <- subset(values$df, Vloer == input$FindFloor)
+  
+  finalInput <- reactive({
+    if (input$adjust) return (adjust(dataInput()))
+    (dataInput())
   })
-  #Zoek tegel knop
-  observeEvent(input$SearchTile, {
-    values$df <- subset(values$df, Tegel == input$FindTile)
+  
+  output$plot <- renderPlot({
+    chartSeries(finalInput(), theme = chartTheme("white"), 
+      type = "line", log.scale = input$log, TA = NULL)
   })
-  #Datum zoek knop, hier is de data.tables library voor nodig. (%between% functie)
-  observeEvent(input$SearchDate, {
-    values$df <- subset(values$df, Datum %between% c(input$dates[1], input$dates[2]))
-  })
-  #Herlaad het huidige bestand, nieuwe bestanden kun je opnieuw laden door weer op de browse knop te drukken.
-  observeEvent(input$Reset, {
-    values$df <- read.csv(input$file$datapath, stringsAsFactors=FALSE)
-  })
-  #Ouput
-  output$df_out <- renderTable({
-        values$df
-    })
 }
 
-# Run the application
+# Run the application 
 shinyApp(ui = ui, server = server)
+
