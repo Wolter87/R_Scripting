@@ -1,6 +1,8 @@
 # R_Scripting
 First try in R_scripting
 
+In here there are some tutorial shiny-apps that I've created.
+
 I began with researching R and tried some of the possibilities in R. The file R-Code trails.R is full of these 'trials'.
 I have tried to make a few shiny-apps with actual visualisations of data, but sadly none of them worked for me.
 
